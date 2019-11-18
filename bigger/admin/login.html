@@ -39,11 +39,83 @@
     </div>
   </div>
 
+  <!-- Button trigger modal -->
+  <button type="button" class="btn btn-primary btn-lg" data-toggle="modal" data-target="#myModal">
+    Launch demo modal
+  </button>
+
+  <!-- Modal -->
+  <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+              aria-hidden="true">&times;</span></button>
+          <h4 class="modal-title" id="myModalLabel">提示</h4>
+        </div>
+        <div class="modal-body">
+
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" data-dismiss="modal">确定</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
-    
+    // 通用地址
+    function hrefs(href = 'http://localhost:8080/api/v1') {
+      return href
+    }
 
+    $(function () {
+      // 获取元素
+      const number = $('.input_txt'); //手机号或邮箱
+      const password = $('[type=password]'); //密码
+      const input = $('[type=submit]'); //提交
+
+
+      // 点击事件
+      input.on('click', function (e) {
+        e.preventDefault()
+        const numbers = number.val().trim() //获取用户输入的号码
+        const mima = password.val().trim() //获取用户输入的密码
+
+        // ajax事件
+        $.post({
+          url: hrefs() + '/admin/user/login',
+          data: {
+            username: numbers,
+            password: mima
+          },
+
+          // 设置密码和用户名不能为空
+          beforeSend: function () {
+            if (numbers == '' || mima == '') {
+              $('#myModal').modal()
+              $('.modal-body').html('请输入电话或密码')
+              return false
+            }
+          },
+          success: function (e) {
+            // 判断有没有输入成功，成功的话添加点击跳转和本地存储
+            if (e.code == 200) {
+              $('#myModal').modal()
+              $('.modal-body').html('登录成功')
+              $('.btn').click(function () {
+                location.href = './index.html' //跳转地址
+                localStorage.setItem('token', e.token) //本地存储token数据
+              })
+            }else {
+              $('#myModal').modal()
+              $('.modal-body').html('用户名或密码不正确')
+            }
+          }
+        })
+      })
+    });
   </script>
-
 </body>
 
 </html>
