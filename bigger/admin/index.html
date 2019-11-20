@@ -53,6 +53,51 @@
         <div class="main" id="main_body">
 
         </div>
+        <!-- js  -->
+        <script>
+            // 通用地址
+            function hrefs(href = 'http://localhost:8080/api/v1') {
+                return href
+            }
+
+            
+            // 设置jq的请求头
+            $.ajaxSetup({
+                //在发送ajax之前设置一个请求头，在请求头设置带上token令牌随ajax一起发送
+                beforeSend:function(xhr){
+                    xhr.setRequestHeader('Authorization',localStorage.getItem('token'))
+                },
+                // error(xhr,status,error) 如果ajax请求失败，执行这个函数
+                error:function(xhr,status,error){
+                    if(error == 'Forbidden'){
+                        //判断，如果返回的值是Forbidden，那么我可以认为你没有登录
+                        alert('非法进入')
+                        location.href = './login.html'
+                    }
+                }
+            })
+            
+
+            // 进入界面用ajax获取数据
+            $.get({
+                url:'http://localhost:8080/api/v1/admin/user/info',
+                dataType:'json',
+                success:function(res){
+                    // 渲染页面
+                    $('.user_info>img').attr('src',res.data.userPic)
+                    $('.user_info>span').html('欢迎&nbsp;&nbsp;'+res.data.nickname)
+                    $('.user_center_link>img').attr('src',res.data.userPic)
+                }
+            })
+
+
+            // 点击退出回到登录界面事件
+            $('.logout').on('click',function(){
+                location.href = './login.html'
+                localStorage.clear()
+            })
+        </script>
     </div>
 </body>
+
 </html>
