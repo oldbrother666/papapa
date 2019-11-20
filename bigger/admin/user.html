@@ -44,7 +44,7 @@
                     <label for="inputPassword3" class="col-sm-2 control-label">用户图标：</label>
                     <div class="col-sm-10">
                         <img src="images/2.jpg" alt="" class="user_pic">
-                        <input style="display: block" name="userPic" type="file" id="exampleInputFile">
+                        <input style="display: none" name="userPic" type="file" id="exampleInputFile">
                         <!-- 给label标签的for属性赋值,值是input标签的id,那这样的话点击label就相当于点击了input -->
                         <br>
                         <label for="exampleInputFile">
@@ -68,6 +68,81 @@
             </form>
         </div>
     </div>
+
+    <!-- js -->
+    <script>
+        
+    $.ajaxSetup({
+        beforeSend:function(e){
+            e.setRequestHeader('Authorization',localStorage.getItem('token'))
+        },
+        error:function(e,status,error){
+            if(error == 'Forbidden'){
+                location.href == './login.html'
+            }
+        }
+    })
+
+
+    $.get({
+        url:'http://localhost:8080/api/v1/admin/user/detail',
+        dataType:'json',
+        success:function(e){
+            $('.username').val(e.data.username)
+            $('.nickname').val(e.data.nickname)
+            $('.email').val(e.data.email)
+            $('.password').val(e.data.password)
+            $('.user_pic').attr('src',e.data.userPic)
+        }
+    })
+    // console.log($('#form')[0]);
+    
+    // 点击获取图片的url
+    $('#exampleInputFile').on('change',function(){
+       var imgs = this.files[0]   //获取img的files
+        
+        var url = URL.createObjectURL(imgs)   //获取img的url
+        $('.user_pic').attr('src',url)     //渲染
+    })
+    
+    // 点击修改按钮事件
+    $('.btn-success').on('click',function(e){
+        
+        e.preventDefault()     // 阻止跳转事件
+        var form = $('#form')[0]   //这个是用jq获取原生元素
+        var forms = new FormData(form)  //转为二进制
+        
+        $.post({
+            url:'http://localhost:8080/api/v1/admin/user/edit',
+            data:forms,
+
+            // 取消请求头
+            contentType:false,
+            processData:false,
+            success:function(e){
+                console.log(e);
+                // 判断他是否更改成功了
+                if(e.code == 200){
+                    $.get({
+                        url:'http://localhost:8080/api/v1/admin/user/info',
+                        success:function(res){
+                            // 渲染父页面
+                            parent.$('.user_info>img').attr('src',res.data.userPic)
+                            parent.$('.user_info>span').html('欢迎&nbsp;&nbsp;'+res.data.nickname)
+                            parent.$('.user_center_link>img').attr('src',res.data.userPic)
+
+                            //自己页面刷新一下
+                            location.reload()
+                        }
+                    })
+                }
+                
+            }
+        })
+    })
+
+
+    </script>
 </body>
 
 </html>
