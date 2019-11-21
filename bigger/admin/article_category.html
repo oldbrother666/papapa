@@ -26,19 +26,19 @@
                 <thead>
                     <tr>
                         <th>名称</th>
-                        <th>Slug</th>
+                        <th>内容</th>
                         <th class="text-center" width="100">操作</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
+                    <!-- <tr>
                         <td>奇趣事</td>
                         <td>funny</td>
                         <td class="text-center">
                             <a href="javascript:void(0)" data-toggle="modal" class=" btn btn-info btn-xs">编辑</a>
                             <a href="javascript:void(0)" class="btn btn-danger btn-xs">删除</a>
                         </td>
-                    </tr>
+                    </tr> -->
                 </tbody>
                 <tfoot>
                     <tr>
@@ -51,5 +51,175 @@
             </table>
         </div>
     </div>
+    <!-- 模态框 -->
+    <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+        data-target="#myModal">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                            aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="exampleModalLabel">提示</h4>
+                </div>
+                <div class="modal-body">
+                    <form>
+                        <!-- 隐藏域 -->
+                        <input type="hidden" id="yin">
+                        <div class="form-group">
+                            <label for="recipient-name" class="control-label">名称</label>
+                            <input type="text" class="form-control" id="recipient-name">
+                        </div>
+                        <div class="form-group">
+                            <label for="message-text" class="control-label">内容</label>
+                            <textarea class="form-control" id="message-text"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-warning qu" data-dismiss="modal">取消</button>
+                    <button type="button" class="btn" id="que">确定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- js -->
+    <script src="./libs/template-web.js"></script>
+    <script type="text/html" id="list">
+        {{each data}}
+        <tr>
+            <td>{{$value.name}}</td>
+            <td>{{$value.slug}}</td>
+            <td class="text-center">
+                <span data-toggle="modal" class=" btn btn-info btn-xs" data-target="#myModal"
+                    data-id='{{$value.id}}'>编辑</span>
+                <button class="btn btn-danger btn-xs btn-delete" data-id='{{$value.id}}'>删除</button>
+            </td>
+        </tr>
+        {{/each}}
+    </script>
+    <script>
+        // 公用地址
+        const dizhi = function () {
+            return 'http://localhost:8080/api/v1'
+        }
+
+        
+        // 需要设置请求头权限
+        $.ajaxSetup({
+            beforeSend: function (e) {
+                e.setRequestHeader('Authorization', localStorage.getItem('token'))
+            },
+            error: function (e, status, error) {
+                if (error == 'Forbidden') {
+                    alert('亲，请登录')
+                    location.href = './login.html'
+                }
+            }
+        })
+        $.get({
+            url: dizhi() + '/admin/category/list',
+            dataType: 'json',
+            success: function (e) {
+                const arr = template('list', e)
+                $('tbody').html(arr)
+            }
+        })
+
+
+        // 编辑事件
+        $('#myModal').on('show.bs.modal', function (e) {
+            //bootstrap的relatedTarget属性可以知道点击了哪一个
+            const a = e.relatedTarget
+            // 用bootstrap事件判断点击的是哪个元素，需要原生dom的元素
+            if (e.relatedTarget == document.querySelector('#xinzengfenlei')) {
+                $('#exampleModalLabel').text('新增分类')
+                $('#que').addClass('btn-success').removeClass('btn-info')
+                $('#message-text').val('')
+                $('#recipient-name').val('')
+                $('.yin').val('')
+
+                // 点击确定的新增内容事件
+                $('#que').off().on('click',function(){
+                    $.post({
+                        url:dizhi() + '/admin/category/add',
+                        data:{
+                            name:$('#recipient-name').val(),
+                            slug:$('#message-text').val()
+                        },
+                        success:function(res){
+                            location.reload()
+                        }
+                    })
+                })
+            } else {
+                $('#exampleModalLabel').text('编辑')
+                $('#que').addClass('btn-info').removeClass('btn-success')
+                const id = $(a).data('id')
+                // 获取后台数据渲染文本
+                $.get({
+                    url: 'http://localhost:8080/api/v1/admin/category/search',
+                    data: {
+                        id: id
+                    },
+                    success: function (res) {
+                        $('#message-text').val(res.data[0].slug)
+                        $('#recipient-name').val(res.data[0].name)
+                        $('#yin').val(res.data[0].id)
+                    }
+                })
+
+                // 点击确定的编辑事件
+                $('#que').off().on('click',function(){
+                    const name = $('#recipient-name').val()
+                    const slug = $('#message-text').val()
+                    $.post({
+                        url:'http://localhost:8080/api/v1/admin/category/edit',
+                        data:{
+                            id:+($('#yin').val()),
+                            name:name,
+                            slug:slug 
+                        },
+                        dataType:'json',
+                        success:function(res){
+                            console.log(res);
+                            
+                        }
+                    })
+                    location.reload()
+                })
+            }
+
+        })
+
+        // 点击取消清空内容
+        $('.qu').on('click', function () {
+            $('#message-text').val('')
+            $('#recipient-name').val('')
+        })
+
+
+        // 点击删除事件
+        $('tbody').on('click','.btn-delete',function(){
+            // confirm确定是1，取消是0
+            const dels = confirm('确定要删除吗')
+            // 获取id
+            const id = $(this).attr('data-id')
+            if(dels){
+                $.post({
+                    url:dizhi()+'/admin/category/delete',
+                    data:{
+                        id:id
+                    },
+                    success:function(res){
+                        if(res.code == 204){
+                            location.reload()
+                        }
+                    }
+                })
+            }
+        })
+
+        //
+    </script>
 
 </html>
