@@ -13,6 +13,9 @@
     <script src="./libs/jquery-1.12.4.min.js"></script>
     <!-- 引入模板引擎js文件 -->
     <script src="./libs/template-web.js"></script>
+    <!-- 引入分页插件 -->
+    <script src="./libs/jquery.twbsPagination.js"></script>
+    <script src="./libs/bootstrap//js/bootstrap.min.js"></script>
 </head>
 
 <body>
@@ -55,7 +58,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
+                    <!-- <tr>
                         <td>王积千造统最头</td>
                         <td>杰克</td>
                         <td>奇趣事</td>
@@ -65,13 +68,179 @@
                             <a href="article_edit.html" class="btn btn-default btn-xs">编辑</a>
                             <a href="javascript:void(0);" class="btn btn-danger btn-xs delete">删除</a>
                         </td>
-                    </tr>
+                    </tr> -->
                 </tbody>
+
             </table>
             <div class="row text-center">
+                <!-- 插件 -->
+                <ul id="pagination-demo" class="pagination-sm"></ul>
             </div>
         </div>
     </div>
+    <script src="./libs/template-web.js"></script>
+    <script type="text/html" id="lists">
+        {{each data.data}}
+        <tr>
+            <td>{{$value.title}}</td>
+            <td>{{$value.author}}</td>
+            <td>{{$value.category}}</td>
+            <td class="text-center">{{$value.date}}</td>
+            <td class="text-center">{{$value.state}}</td>
+            <td class="text-center">
+                <a href="article_edit.html" class="btn btn-default btn-xs" data-id='{{$value.id}}'>编辑</a>
+                <a href="javascript:void(0);" class="btn btn-danger btn-xs delete" data-id='{{$value.id}}'>删除</a>
+            </td>
+        </tr>
+        {{/each}}
+    </script>
+    <script>
+        // 通用地址
+        function hrefs(href = 'http://localhost:8080/api/v1') {
+            return href
+        }
+        // 设置jq的请求头
+        $.ajaxSetup({
+            beforeSend: function (xhr) {
+                xhr.setRequestHeader('Authorization', localStorage.getItem('token'))
+            },
+            error: function (xhr, status, error) {
+                if (error == 'Forbidden') {
+                    alert('非法进入')
+                    location.href = './login.html'
+                }
+            }
+        })
+
+
+        // 获取后台所有分类数据
+        $.get({
+            url: hrefs() + '/admin/category/list',
+            success: function (res) {
+
+                const arrs = res.data.map(function (item) {
+                    return `<option value="${item.id}">${item.name}</option>`
+                })
+                $('#selCategory').html(`<option value="">所有分类</option>` + arrs)
+            }
+        })
+
+
+
+        // 一打开页面的文章搜索
+        var page = 1; //一页显示多少个
+        var parpage = 10 //一共多少页
+        $.get({
+            url: hrefs() + '/admin/article/query',
+            data: {
+                type: $('#selCategory').val(),
+                state: $('#selStatus').val(),
+                page: page,
+                perpage: parpage
+            },
+            success: function (res) {
+                console.log(res);
+                const htmls = template('lists', res)
+                $('tbody').html(htmls)
+                $('#pagination-demo').twbsPagination({
+                    totalPages: Math.ceil(res.data.totalCount/10),
+                    visiblePages: 7,
+                    first: '最前',
+                    prev: '上一个',
+                    next: '下一个',
+                    last: '最后一个',
+                    onPageClick: function (event, page) {
+                        
+                        //获取总共有多少页
+                        page = page
+                        $.get({
+                            url: hrefs() + '/admin/article/query',
+                            data: {
+                                type: $('#selCategory').val(),
+                                state: $('#selStatus').val(),
+                                page: page,
+                                perpage: parpage
+                            },
+                            success: function (res) {
+                                // 渲染点击页数的页面
+                                console.log(res);
+                                const htmls = template('lists', res)
+                                $('tbody').html(htmls)
+                            }
+                        })
+
+                    }
+                });
+            }
+        })
+
+        // 点击筛选事件
+        $('#btnSearch').on('click', function (e) {
+            e.preventDefault() //阻止默认行为
+
+            $.get({
+                url: hrefs() + '/admin/article/query',
+                data: {
+                    type: $('#selCategory').val(),
+                    state: $('#selStatus').val(),
+                    page: 1,
+                    perpage: parpage
+                },
+                success: function (res) {
+                    // 判断如果不是空的话就有分页条,空的话就没有分页条
+                    if (res.code == 200 && res.data.data.length != 0) {
+                        const htmls = template('lists', res)
+                        $('tbody').html(htmls)
+                        // 更改分页的页数
+                        $('#pagination-demo').twbsPagination('changeTotalPages', res.data.totalPage,1)
+                        $('#pagination-demo').show()
+                    }else{
+                        $('tbody').html('<tr><td colspan=6 style="text-align:center;font-size:17px">亲，没有数据哟</td></tr>')
+                        $('#pagination-demo').hide()
+                    }
+
+                }
+            })
+        })
+
+
+
+        // 事件委派删除文章
+        $('table').on('click', '.delete', function () {
+            const bl = confirm('确定要删除吗')
+            const id = $(this).data('id')
+
+            if (bl) {
+                $.post({
+                    url: hrefs() + '/admin/article/delete',
+                    data: {
+                        id: id
+                    },
+                    success: function (res) {
+                        console.log(res);
+                        if (res.code == 204) {
+                            location.reload()
+                        }
+                    }
+                })
+            }
+        })
+
+
+        //    分页插件
+        // $('#pagination-demo').twbsPagination({
+        //     totalPages: 10,
+        //     visiblePages: 7,
+        //     first:'最前',
+        //     prev:'上一个',
+        //     next:'下一个',
+        //     last:'最后一个',
+        //     onPageClick: function (event, page) {
+        //         console.log(page);
+
+        //     }
+        // });
+    </script>
 </body>
 
 </html>
