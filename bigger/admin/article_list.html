@@ -88,7 +88,7 @@
             <td class="text-center">{{$value.date}}</td>
             <td class="text-center">{{$value.state}}</td>
             <td class="text-center">
-                <a href="article_edit.html" class="btn btn-default btn-xs" data-id='{{$value.id}}'>编辑</a>
+                <a href="article_edit.html?id={{$value.id}}" class="btn btn-default btn-xs" data-id='{{$value.id}}'>编辑</a>
                 <a href="javascript:void(0);" class="btn btn-danger btn-xs delete" data-id='{{$value.id}}'>删除</a>
             </td>
         </tr>
@@ -139,7 +139,7 @@
                 perpage: parpage
             },
             success: function (res) {
-                console.log(res);
+                // console.log(res);
                 const htmls = template('lists', res)
                 $('tbody').html(htmls)
                 $('#pagination-demo').twbsPagination({
@@ -163,7 +163,7 @@
                             },
                             success: function (res) {
                                 // 渲染点击页数的页面
-                                console.log(res);
+                                // console.log(res);
                                 const htmls = template('lists', res)
                                 $('tbody').html(htmls)
                             }
@@ -217,7 +217,7 @@
                         id: id
                     },
                     success: function (res) {
-                        console.log(res);
+                        // console.log(res);
                         if (res.code == 204) {
                             location.reload()
                         }

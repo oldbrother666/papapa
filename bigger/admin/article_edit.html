@@ -10,6 +10,11 @@
     <link rel="stylesheet" href="css/reset.css">
     <link rel="stylesheet" href="css/iconfont.css">
     <link rel="stylesheet" href="css/main.css">
+    <!-- 时间插件 -->
+    <link rel="stylesheet" href="./libs/jedate/css/jeDate-test.css">
+    <link rel="stylesheet" href="./libs/jedate/css/jedate.css">
+    <script src="./libs/jedate/js/jedate.js"></script>
+
     <!-- jq -->
     <script src="./libs/jquery-1.12.4.min.js"></script>
     <!-- 模板引擎 -->
@@ -23,6 +28,7 @@
         </div>
         <div class="container-fluid common_con">
             <form class="form-horizontal article_form" id="form">
+                <input type="hidden" name="id" id="yin">
                 <div class="form-group">
                     <label for="inputTitle" class="col-sm-2 control-label">文章标题：</label>
                     <div class="col-sm-10">
@@ -32,7 +38,7 @@
                 <div class="form-group">
                     <label for="inputCover" class="col-sm-2 control-label">文章封面：</label>
                     <div class="col-sm-10">
-                        <img src="images/pic06.jpg" class="article_cover">
+                        <img src="images/pic06.jpg" class="article_cover" id="picture">
                         <input name="cover" type="file" id="inputCover">
                     </div>
                 </div>
@@ -40,33 +46,199 @@
                     <label for="inputCategory" class="col-sm-2 control-label">文章类别：</label>
                     <div class="col-sm-4">
                         <select class="form-control category" name="categoryId">
-                            <option>类别一</option>
+                            <!-- <option>类别一</option>
                             <option>类别二</option>
                             <option>类别三</option>
                             <option selected>类别四</option>
-                            <option>类别五</option>
+                            <option>类别五</option> -->
                         </select>
                     </div>
                 </div>
                 <div class="form-group">
                     <label class="col-sm-2 control-label">发布时间：</label>
-                    <div class="col-sm-4">
+                    <!-- <div class="col-sm-7" id="fabu">
+                    </div> -->
+                    <!-- 时间插件 -->
+                    <div class="jeinpbox">
+                            <input type="text" class="jeinput" id="testico" placeholder="YYYY-MM-DD" name="date">
+                            <div class="icons jebtns" onclick="jeDate('#testico',{trigger:false,format: 'YYYY-MM-DD',zIndex:99999})"></div>
                     </div>
                 </div>
                 <div class="form-group">
                     <label for="inputEmail3" class="col-sm-2 control-label">文章内容：</label>
-                    <div class="col-sm-10">
+                    <div class="col-sm-7" id="neirong">
+                        <div id="editor">
+                            <p>欢迎使用 <b>wangEditor</b> 富文本编辑器</p>
+                        </div>
                     </div>
                 </div>
                 <div class="form-group">
                     <div class="col-sm-offset-2 col-sm-10">
-                        <button type="submit" class="btn btn-success btn-edit">修改</button>
-                        <button type="submit" class="btn btn-default btn-draft">存为草稿</button>
+                        <button type="submit" class="btn btn-success btn-edit" id="xiu">发布</button>
+                        <button type="submit" class="btn btn-default btn-draft" id="cao">存为草稿</button>
                     </div>
                 </div>
             </form>
         </div>
     </div>
+    <!-- 富文本编辑器 -->
+    <script src="./libs//wangEditor.js"></script>
+    <!-- 模版引擎 -->
+    <script type="text/html" id="lists">
+        {{each data v}}
+        <option value='{{v.id}}'>{{v.name}}</option>
+        {{/each}}
+    </script>
+    <!-- js -->
+    <script>
+        $(function () {
+            // 沙箱函数________________________________________________________________________________
+
+            //获取令牌权限
+            $.ajaxSetup({
+                beforeSend: function (xhr) {
+                    xhr.setRequestHeader('Authorization', localStorage.getItem('token'))
+                },
+                error: function (xhr, status, error) {
+                    if (error == 'Forbidden') {
+                        alert('请先登录')
+                        location.href = './login.html'
+                    }
+                }
+            })
+
+            // 点击修改图片
+            $('#inputCover')[0].onchange = function () {
+                const imgs = this.files[0]
+
+                const img = URL.createObjectURL(imgs)
+                console.log(img);
+                $('#picture').attr('src', img)
+            }
+
+
+            // 通用地址
+            function hrefs(href = 'http://localhost:8080/api/v1') {
+                return href
+            }
+
+            // 获取网页的id值
+            const thisId = location.search
+            const thisId1 = thisId.slice(1)
+            const thisId2 = thisId1.split('=')
+
+            // 渲染下拉列表
+            $.get({
+                url: hrefs() + '/admin/category/list',
+                success: function (res) {
+                    if (res.code == 200) {
+                        const htmls = template('lists', res)
+                        $('.category').html(htmls)
+                    }
+                }
+            })
+
+            // 富文本编辑器
+            var E = window.wangEditor
+            var editor = new E('#editor')
+            editor.create()
+
+            // 根据ajax返回的id获取类别
+            $.get({
+                url: hrefs() + '/admin/article/search',
+                data: {
+                    id: thisId2[1]
+                },
+                success: function (res) {
+                    console.log(res);
+                    if (res.code == 200) {
+                        $('#inputTitle').val(res.data.title)
+                        $('#picture').attr('src', res.data.cover)
+                        $('#testico').val(res.data.date)
+                        editor.txt.html(res.data.content)
+                        $('select.category').val(res.data.categoryId)
+                        $('#yin').val(res.data.id)
+                    }
+                }
+            })
+
+
+            // 点击编辑修改内容
+            $('#xiu').on('click', function (e) {
+                e.preventDefault()
+
+                // 获取二进制数据
+                let str = $('#form')[0]
+                let forms =new FormData(str)
+                // 塞富文本内容和是不是发布这个进去
+                forms.append('state','已发布')
+                forms.append('content',editor.txt.html())
+
+                $.post({
+                    url:hrefs()+'/admin/article/edit',
+                    dataType:'json',
+                    data:forms,
+                    contentType:false,
+                    processData:false,
+                    success:function(res){
+                        // console.log(res);
+                        if(res.code == 200){
+                            alert('发布成功')
+                            location.href = './article_list.html'
+                        }
+                        
+                    }
+                })
+            })
+
+
+            // 点击存为草稿
+            $('#cao').on('click',function(e){
+                e.preventDefault()
+
+                // 获取二进制数据
+                let strs = document.querySelector('#form')
+                let forms = new FormData(strs)
+                forms.append('state','草稿')
+                forms.append('content',editor.txt.html())
+
+                // ajax 
+                $.post({
+                    url:hrefs()+'/admin/article/edit',
+                    data:forms,
+                    dataType:'json',
+                    contentType:false,
+                    processData:false,
+                    success:function(res){
+                        alert('存为草稿成功')
+                        location.href = './article_list.html'
+                        
+                    }
+                })
+            })
+
+
+            // 时间插件
+            jeDate("#testico", {
+                zIndex:99999,
+                festival: false,
+                format: 'YYYY-MM-DD hh:mm:ss',
+                isTime: true,
+            })
+
+
+
+
+
+
+
+
+
+            // 沙箱函数________________________________________________________________________________
+        })
+    </script>
+    <!-- 时间插件 -->
+    <!-- <script src="./libs/jedate//js/demo.js"></script> -->
 </body>
 
 </html>
